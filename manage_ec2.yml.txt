@@ -1,0 +1,27 @@
+---
+- name: Manage EC2 Instances Based on Tags
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Check if instance is managed
+      ansible.builtin.fail:
+        msg: "This instance is not managed."
+      when: "'true' not in ec2_tag_Managed"
+
+    - name: Set the hostname based on the Name tag
+      ansible.builtin.hostname:
+        name: "{{ ec2_tag_Name }}"
+
+    - name: Install service
+      ansible.builtin.package:
+        name: "{{ ec2_tag_Service }}"
+        state: "{{ 'latest' if ec2_tag_Version == '' else ec2_tag_Version }}"
+      register: install_result
+
+    - name: Create a cron job for server restart
+      ansible.builtin.cron:
+        name: "Restart server"
+        weekday: "{{ ec2_tag_Restart.split()[0] }}"
+        hour: "{{ ec2_tag_Restart.split()[1].split(':')[0] }}"
+        minute: "{{ ec2_tag_Restart.split()[1].split(':')[1] }}"
+        job: "/sbin/shutdown -r now"
